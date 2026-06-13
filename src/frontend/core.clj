@@ -1,6 +1,7 @@
 (ns frontend.core
   (:require [clj-http.client :as client]
-            [cheshire.core :as json])
+            [cheshire.core :as json]
+            [clojure.string :as str])
   (:gen-class))
 
 
@@ -20,8 +21,7 @@
 (cond 
 
 
-;; primeira opcao onde a gente vai fazer o cadastro ai seguinte dentro do let a gente ta armazenando as variaveis nome idade sexo peso altura
-;; onde tem _ é pra salvar variaveis que nao vao ser utilizadas!!! 
+;; primeira opcao onde a gente vai fazer o cadastro
 (= opcaoEscolhida "1") 
   (do 
     (println "\n--- 1. Cadastrar/Consultar dados pessoais ---")
@@ -43,22 +43,31 @@
 
           _(println "Digite sua idade:")
           _(flush)
-          idade (read-line)
+          idade (Integer/parseInt (read-line))
 
-          _(println "Informe seu sexo (Masculino/Feminino):")
+          _(println "Informe seu sexo (M/F):")
           _(flush)
-          sexo (read-line)
+          sexo (str/upper-case (read-line))
 
-          _(println "Informe seu peso:")
+          _(println "Informe seu peso (kg):")
           _(flush)
-          peso (read-line)
+          peso (Double/parseDouble (read-line))
 
-          _(println "Informe sua altura:")
+          _(println "Informe sua altura (m):")
           _(flush)
-          altura (read-line)
+          altura (Double/parseDouble (read-line))
+
+          pacote-json (json/generate-string {:nome nome :idade idade :sexo sexo :peso peso :altura altura})
+
+          resposta (client/post "http://localhost:3000/usuario"
+                     {:body pacote-json
+                      :content-type :json
+                      :accept :json})
+
+          dados (json/parse-string (:body resposta) true)
           ] ;; aqui fecha a chave do let
 
-            (println "Dados pessoais cadastrados com sucesso! Obrigado" nome)
+            (println "Dados pessoais cadastrados com sucesso! Obrigado" (:nome dados))
             (println "Aperte ENTER para voltar ao menu inicial")
             (flush)
             (read-line)
@@ -66,8 +75,16 @@
 
         (or (= subOpcao "B") (= subOpcao "b"))
         (do
-          (println "\n Buscando dados no servidorrr")
-          (println "get pro back")
+          (println "\nBuscando dados no servidor...")
+
+          (let [resposta (client/get "http://localhost:3000/usuario")
+                dados (json/parse-string (:body resposta) true)]
+            (println "Nome   :" (:nome dados))
+            (println "Idade  :" (:idade dados))
+            (println "Sexo   :" (:sexo dados))
+            (println "Peso   :" (:peso dados) "kg")
+            (println "Altura :" (:altura dados) "m"))
+
           (println "Aperte ENTER para voltar ao menu inicial")
           (flush)
           (read-line)
@@ -79,7 +96,6 @@
           (recur)))))
 
 
-;; aqui a gente vai registrar o consumo de aljmentos
 (= opcaoEscolhida "2")
   (do 
     (println "\nBem-vindo ao registro de consumo de alimentos")
@@ -89,18 +105,26 @@
       _(flush)
       alimento (read-line)
 
-      _(println "Qual a data do consumo")
+      _(println "Qual a data do consumo? (AAAA-MM-DD)")
       _(flush)
       data (read-line)
 
-      _(println "Quantas calorias tem esse alimento?")
+      _(println "Qual a quantidade consumida (em gramas)?")
       _(flush)
-      calorias (read-line)
+      quantidade (Double/parseDouble (read-line))
 
-      typpe "ganho"
+      pacote-json (json/generate-string {:nome alimento :data data :quantidade quantidade})
+
+      resposta (client/post "http://localhost:3000/alimento"
+                   {:body pacote-json
+                    :content-type :json
+                    :accept :json})
+
+      dados (json/parse-string (:body resposta) true)
     ] ;; aqui fecha a chave do let
 
-      (println "Alimento registrado com sucesso! Obrigado" alimento data calorias)
+      (println "Alimento registrado com sucesso!")
+      (println "Calorias calculadas pelo servidor:" (:calorias dados) "kcal")
       (println "Aperte ENTER para voltar ao menu inicial")
       (flush)
       (read-line)
@@ -111,21 +135,29 @@
   (do 
     (println "\n--- Registro de Atividade Física ---")
     (let [
-      _(println "Qual a atividade física que realizou?")
+      _(println "Qual a atividade física que realizou? (em inglês, ex: running)")
       _(flush)
       atividade (read-line)
 
-      _(println "Qual a data da atividade?")
+      _(println "Qual a data da atividade? (AAAA-MM-DD)")
       _(flush)
       data (read-line)
 
       _(println "Qual foi a duração (em minutos)?")
       _(flush)
-      duracao (read-line)
-      
-      typpe "perda"
+      duracao (Double/parseDouble (read-line))
+
+      pacote-json (json/generate-string {:nome atividade :data data :duracao duracao})
+
+      resposta (client/post "http://localhost:3000/atividade"
+                   {:body pacote-json
+                    :content-type :json
+                    :accept :json})
+
+      dados (json/parse-string (:body resposta) true)
     ]
-      (println "\nAtividade registrada com sucesso no front-end!")
+      (println "\nAtividade registrada com sucesso!")
+      (println "Calorias gastas calculadas pelo servidor:" (:calorias dados) "kcal")
       (println "Aperte ENTER para voltar ao menu inicial")
       (flush)
       (read-line)
@@ -135,8 +167,18 @@
 (= opcaoEscolhida "4")
   (do 
     (println "\n--- Extrato de Transações ---")
-    (println "back")
-    (println "Aperte ENTER para voltar ao menu inicial")
+    (let [
+      resposta (client/get "http://localhost:3000/extrato")
+      dados (json/parse-string (:body resposta) true)
+    ]
+      (println "\nSeu extrato atualizado direto do servidor:")
+      (loop [lista (:transacoes dados)]
+        (when (seq lista)
+          (let [t (first lista)]
+            (println " -" (:tipo t) "|" (:nome t) "|" (:data t) "|" (:calorias t) "kcal")
+            (recur (rest lista)))))
+    )
+    (println "\nAperte ENTER para voltar ao menu inicial")
     (flush)
     (read-line)
     (recur))
@@ -145,8 +187,13 @@
 (= opcaoEscolhida "5")
   (do 
     (println "\n--- Saldo de Calorias ---")
-    (println "back")
-    (println "Aperte ENTER para voltar ao menu inicial")
+    (let [
+      resposta (client/get "http://localhost:3000/saldo")
+      dados (json/parse-string (:body resposta) true)
+    ]
+      (println "\nSaldo de calorias:" (:saldo dados) "kcal")
+    )
+    (println "\nAperte ENTER para voltar ao menu inicial")
     (flush)
     (read-line)
     (recur))
