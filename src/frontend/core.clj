@@ -6,14 +6,15 @@
 
 
 (defn menuteste []
-  (println "\nOpa! Bem-vindo a nossa calculadora hehe")
+  (println "\nOpa! Bem-vindo a nossa calculadora de caloriass")
   (println "=========================================")
   (println "1. Cadastrar/Consultar dados pessoais")
   (println "2. Registrar consumo de alimento")
   (println "3. Registrar realização de atividade")
   (println "4. Consultar extrato de transações")
   (println "5. Consultar saldo de calorias")
-  (println "6. Sair")
+  (println "6. Limpar o extrato")
+  (println "7. Sair")
   (flush)
 
 
@@ -23,7 +24,7 @@
 
       (= opcaoEscolhida "1")
       (do
-        (println "\n--- 1. Cadastrar/Consultar dados pessoais ---")
+        (println "\n1. Cadastrar/Consultar dados pessoais")
         (println "A. Cadastrar novos dados")
         (println "B. Consultar dados atuais")
         (print "Escolha (A ou B): ")
@@ -33,7 +34,7 @@
           (cond
             (or (= subOpcao "A") (= subOpcao "a"))
             (do
-              (println "\nBem Vindo ao cadastro de dados pessoais")
+              (println "\nCadastro de dados pessoais")
 
               (let [_ (println "Digite seu nome:")
                     _ (flush)
@@ -57,7 +58,7 @@
 
                     pacote-json (json/generate-string {:nome nome :idade idade :sexo sexo :peso peso :altura altura})
 
-                    resposta (client/post "http://localhost:3001/usuario"
+                    resposta (client/post "http://localhost:3000/usuario"
                                           {:body pacote-json
                                            :content-type :json
                                            :accept :json})
@@ -74,7 +75,7 @@
             (do
               (println "\nBuscando dados no servidor...")
 
-              (let [resposta (client/get "http://localhost:3001/usuario")
+              (let [resposta (client/get "http://localhost:3000/usuario")
                     dados (json/parse-string (:body resposta) true)]
                 (println "Nome   :" (:nome dados))
                 (println "Idade  :" (:idade dados))
@@ -95,7 +96,7 @@
 
       (= opcaoEscolhida "2")
       (do
-        (println "\nBem-vindo ao registro de consumo de alimentos")
+        (println "\nRegistro de consumo de alimentos")
 
         (let [_ (println "Qual alimento você consumiu?")
               _ (flush)
@@ -111,7 +112,7 @@
 
               pacote-json (json/generate-string {:nome alimento :data data :quantidade quantidade})
 
-              resposta (client/post "http://localhost:3001/alimento"
+              resposta (client/post "http://localhost:3000/alimento"
                                     {:body pacote-json
                                      :content-type :json
                                      :accept :json})
@@ -128,8 +129,8 @@
 
       (= opcaoEscolhida "3")
       (do
-        (println "\n--- Registro de Atividade Física ---")
-        (let [_ (println "Qual a atividade física que realizou? (em inglês, ex: running)")
+        (println "\nRegistro de Atividade Física")
+        (let [_ (println "Qual a atividade física que realizou?")
               _ (flush)
               atividade (read-line)
 
@@ -143,7 +144,7 @@
 
               pacote-json (json/generate-string {:nome atividade :data data :duracao duracao})
 
-              resposta (client/post "http://localhost:3001/atividade"
+              resposta (client/post "http://localhost:3000/atividade"
                                     {:body pacote-json
                                      :content-type :json
                                      :accept :json})
@@ -159,11 +160,11 @@
 
       (= opcaoEscolhida "4")
       (do
-        (println "\n--- Extrato de Transações ---")
-        (let [resposta (client/get "http://localhost:3001/extrato")
+        (println "\nExtrato de Transações")
+        (let [resposta (client/get "http://localhost:3000/extrato")
               dados (json/parse-string (:body resposta) true)]
           (println "\nSeu extrato atualizado direto do servidor:")
-          (map (fn [t]
+          (run! (fn [t]
                  (println " -" (:tipo t) "|" (:nome t) "|" (:data t) "|" (:calorias t) "kcal"))
                (:transacoes dados)))
         (println "\nAperte ENTER para voltar ao menu inicial")
@@ -174,8 +175,8 @@
 
       (= opcaoEscolhida "5")
       (do
-        (println "\n--- Saldo de Calorias ---")
-        (let [resposta (client/get "http://localhost:3001/saldo")
+        (println "\nSaldo de Calorias")
+        (let [resposta (client/get "http://localhost:3000/saldo")
               dados (json/parse-string (:body resposta) true)]
           (println "\nSaldo de calorias:" (:saldo dados) "kcal"))
         (println "\nAperte ENTER para voltar ao menu inicial")
@@ -183,8 +184,17 @@
         (read-line)
         (recur))
 
-
       (= opcaoEscolhida "6")
+      (do
+        (println "\nLimpando extrato...")
+        (client/delete "http://localhost:3000/limpar")
+        (println "Extrato limpo com sucesso!")
+        (println "Aperte ENTER para voltar ao menu inicial")
+        (flush)
+        (read-line)
+        (recur))
+
+      (= opcaoEscolhida "7")
       (println "\nsaindoo...")
 
       :else
