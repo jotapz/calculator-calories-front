@@ -75,13 +75,16 @@
             (do
               (println "\nBuscando dados no servidor...")
 
-              (let [resposta (client/get "http://localhost:3000/usuario")
+              (let [resposta (client/get "http://localhost:3000/usuario" {:throw-exceptions false})
                     dados (json/parse-string (:body resposta) true)]
-                (println "Nome   :" (:nome dados))
-                (println "Idade  :" (:idade dados))
-                (println "Sexo   :" (:sexo dados))
-                (println "Peso   :" (:peso dados) "kg")
-                (println "Altura :" (:altura dados) "m"))
+                (if (= (:status resposta) 200)
+                   (do
+                      (println "Nome   :" (:nome dados))
+                      (println "Idade  :" (:idade dados))
+                      (println "Sexo   :" (:sexo dados))
+                      (println "Peso   :" (:peso dados) "kg")
+                      (println "Altura :" (:altura dados) "m"))
+                   (println "Nenhum usuário cadastrado ainda!")))
 
               (println "Aperte ENTER para voltar ao menu inicial")
               (flush)
